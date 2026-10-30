@@ -5,6 +5,7 @@ import incidentsRoutes from "./routes/incidentRoutes.js"
 const app=express();
 
 const allowedOrigins = [
+    "https://frontend-zeta-five-39.vercel.app",
     "https://ev-charging-station-frontend.vercel.app",
     "http://localhost:5173"
 ];
