@@ -1,82 +1,85 @@
 
 import express from "express";
-import { stations, incidents, STATUSES } from "../data/store.js";
+import { stations, STATUSES } from "../data/store.js";
+import db from "../database/db.js";
 
 const router = express.Router();
 
 // GET /api/incidents
-router.get("/", (req, res) => {
-  res.json([...incidents].reverse());
+router.get("/", async (req, res) => {
+    try {
+        res.set("Cache-Control", "no-store");
+
+        const result = await db.query(
+            "SELECT * FROM incidents ORDER BY id DESC"
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Fetch incidents error:", error);
+        res.status(500).json({ error: "Failed to fetch incidents" });
+    }
 });
 
 // GET /api/incidents/status
-router.get("/status", (req, res) => {
-  const counts = Object.fromEntries(
-    STATUSES.map((status) => [status, 0])
-  );
+router.get("/status", async (req, res) => {
+    try {
+        res.set("Cache-Control", "no-store");
 
-  // Count current station statuses
-  for (const station of stations) {
-    if (counts[station.status] !== undefined) {
-      counts[station.status]++;
-    } else {
-      console.warn(`Unknown station status: ${station.status}`);
-    }
-  }
-
-  // Count incident results
-  const recoveredCount = incidents.filter(
-    (incident) => incident.result === "RECOVERED"
-  ).length;
-
-  const failedCount = incidents.filter(
-    (incident) => incident.result === "NEEDS_TECHNICIAN"
-  ).length;
-
-  const pendingCount = incidents.filter(
-    (incident) => incident.result === "PENDING"
-  ).length;
-
-  // Calculate completed incidents
-  const completedIncidents = recoveredCount + failedCount;
-
-  // Calculate recovery success rate
-  const recoverySuccessRate =
-    completedIncidents === 0
-      ? 0
-      : Number(
-          ((recoveredCount / completedIncidents) * 100).toFixed(1)
+        const result = await db.query(
+            "SELECT result, COUNT(*)::int AS count FROM incidents GROUP BY result"
         );
 
-  // Calculate average recovery time
-  const recoveredIncidents = incidents.filter(
-    (incident) =>
-      incident.result === "RECOVERED" &&
-      incident.recoverySeconds !== null &&
-      incident.recoverySeconds !== undefined
-  );
+        const incidentCounts = Object.fromEntries(
+            result.rows.map(row => [row.result, row.count])
+        );
 
-  const totalRecoveryTime = recoveredIncidents.reduce(
-    (total, incident) =>
-      total + Number(incident.recoverySeconds),
-    0
-  );
+        const counts = Object.fromEntries(
+            STATUSES.map(status => [status, 0])
+        );
 
-  const averageRecoverySeconds =
-    recoveredIncidents.length > 0
-      ? totalRecoveryTime / recoveredIncidents.length
-      : null;
+        for (const station of stations) {
+            if (counts[station.status] !== undefined) {
+                counts[station.status]++;
+            }
+        }
 
-  res.json({
-    totalStations: stations.length,
-    statusCounts: counts,
-    totalIncidents: incidents.length,
-    recoveredIncidents: recoveredCount,
-    failedIncidents: failedCount,
-    pendingIncidents: pendingCount,
-    recoverySuccessRate,
-    averageRecoverySeconds
-  });
+        const recoveredCount = incidentCounts.RECOVERED || 0;
+        const failedCount = incidentCounts.NEEDS_TECHNICIAN || 0;
+        const pendingCount = incidentCounts.PENDING || 0;
+
+        const completed = recoveredCount + failedCount;
+
+        const recoverySuccessRate = completed
+            ? Number(((recoveredCount / completed) * 100).toFixed(1))
+            : 0;
+
+        const recoveryTime = await db.query(`
+            SELECT AVG("recoverySeconds") AS average
+            FROM incidents
+            WHERE result = 'RECOVERED'
+        `);
+
+        res.json({
+            totalStations: stations.length,
+            statusCounts: counts,
+            totalIncidents: result.rows.reduce(
+                (sum, row) => sum + row.count, 0
+            ),
+            recoveredIncidents: recoveredCount,
+            failedIncidents: failedCount,
+            pendingIncidents: pendingCount,
+            recoverySuccessRate,
+            averageRecoverySeconds:
+                recoveryTime.rows[0].average === null
+                    ? null
+                    : Number(recoveryTime.rows[0].average)
+        });
+
+    } catch (error) {
+        console.error("Incident status error:", error);
+        res.status(500).json({ error: "Failed to fetch incident status" });
+    }
 });
 
 export default router;
