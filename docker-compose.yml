@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    image: ev-backend-new:v1
+    container_name: ev-backend-new
+    ports:
+      - "5000:5000"
+    volumes:
+      - ev-data-new:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    image: ev-frontend-new:v1
+    container_name: ev-frontend-new
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5001
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  ev-data-new:
