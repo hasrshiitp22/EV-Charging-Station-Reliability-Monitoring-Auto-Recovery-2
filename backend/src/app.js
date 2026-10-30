@@ -1,8 +1,11 @@
-import  express from "express"
-import cors from "cors"
+
+import express from "express";
+import cors from "cors";
+
 import stationRoutes from "./routes/stationRoute.js";
-import incidentsRoutes from "./routes/incidentRoutes.js"
-const app=express();
+import incidentsRoutes from "./routes/incidentRoutes.js";
+
+const app = express();
 
 const allowedOrigins = [
     "https://frontend-zeta-five-39.vercel.app",
@@ -15,9 +18,10 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
-app.use(express.json())
 
-app.use("/api/stations",stationRoutes);
-app.use("/api/incidents",incidentsRoutes);
+app.use(express.json());
+
+app.use("/api/stations", stationRoutes);
+app.use("/api/incidents", incidentsRoutes);
 
 export default app;
