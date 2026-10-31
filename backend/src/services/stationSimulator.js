@@ -38,7 +38,7 @@ async function simulateStations() {
 
             } else if (
                 station.status === "CHARGING" &&
-                random < 0.07
+                random < 0.11
             ) {
                 station.status = "AVAILABLE";
                 console.log(`${station.id} is now AVAILABLE`);
