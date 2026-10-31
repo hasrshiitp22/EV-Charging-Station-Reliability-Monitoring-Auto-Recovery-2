@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import "./App.css";
 
-const API_URL ="https://ev-charging-station-reliability-monitori-hasrshiitp22s-projects.vercel.app/api/incidents";
+const API_URL ="https://ev-charging-station-reliability-monitori-hasrshiitp22s-projects.vercel.app/api";
 
 function formatDate(value) {
   if (!value) return "—";
